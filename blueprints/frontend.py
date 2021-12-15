@@ -5,6 +5,8 @@ __all__ = ()
 import hashlib
 import os
 import time
+import datetime
+import timeago
 
 from cmyui.logging import Ansi
 from cmyui.logging import log
@@ -326,13 +328,21 @@ async def profile(id):
         [id]
     )
 
+    freezeinfo = [user_data['frozen'], timeago.format(datetime.fromtimestamp(user_data['freezetime']), datetime.now())]
+    if await glob.db.fetch('SELECT 1 FROM user_badges WHERE userid = %s', [user_data['id']]):
+        badges = True
+        defbadges = await glob.db.fetchall("SELECT badgeid, badges.name, badges.colour, badges.icon FROM user_badges LEFT JOIN badges ON user_badges.badgeid = badges.id WHERE userid = %s", [userdata['id']])
+    else:
+        badges = None
+        defbadges = None
+
     # user is banned and we're not staff; render 404
     if not user_data or (user_data['priv'] & Privileges.Disallowed):
         return (await render_template('404.html'), 404)
 
     user_data['customisation'] = utils.has_profile_customizations(id)
 
-    return await render_template('profile.html', user=user_data, mode=mode, mods=mods)
+    return await render_template('profile.html', user=user_data, mode=mode, mods=mods, ub=badges, bi=defbadges, freeze=freezeinfo)
 
 @frontend.route('/leaderboard')
 @frontend.route('/lb')
